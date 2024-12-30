@@ -115,7 +115,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./bin/
-          server-dir: /home/roman/nginx/app/public/builds/
+          server-dir: /home/user/builds/
 
       - name: Delete Current Release Assets
         uses: 8Mi-Tech/delete-release-assets-action@main
