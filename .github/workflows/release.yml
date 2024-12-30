@@ -108,20 +108,15 @@ jobs:
         run: tree
         working-directory: bin
 
-      - name: Upload files to server via SCP
-        uses: appleboy/ssh-action@v1.2.0
+      - name: Upload files to server via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          host: ${{ secrets.SFTP_SERVER }}
-          username: ${{ secrets.SFTP_USERNAME }}
-          password: ${{ secrets.SFTP_PASSWORD }}
-          port: 22
-          script: |
-            mkdir -p /home/roman/nginx/app/public/builds
-            for file in $GITHUB_WORKSPACE/bin/*.tar.gz; do
-              echo "Uploading $file..."
-              scp -o StrictHostKeyChecking=no -P 22 "$file" ${{ secrets.SFTP_USERNAME }}@${{ secrets.SFTP_SERVER }}:/home/roman/nginx/app/public/builds
-            done
-            
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./bin
+          server-dir: /home/roman/nginx/app/public/builds
+
       - name: Delete Current Release Assets
         uses: 8Mi-Tech/delete-release-assets-action@main
         with:
