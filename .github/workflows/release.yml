@@ -114,9 +114,11 @@ jobs:
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
         run: |
-          find ./bin -name "*" -exec curl --ftp-create-dirs -T {} \
-          ftp://$FTP_USERNAME:$FTP_PASSWORD@$FTP_SERVER/builds/ \;
-
+          for file in ./bin/*.tar.gz; do
+            echo "Uploading $file to FTP..."
+            curl --ftp-create-dirs -T "$file" \
+              ftp://$FTP_USERNAME:$FTP_PASSWORD@$FTP_SERVER/builds/ || exit 1
+          done
       - name: Delete Current Release Assets
         uses: 8Mi-Tech/delete-release-assets-action@main
         with:
