@@ -108,16 +108,21 @@ jobs:
         run: tree
         working-directory: bin
 
-      - name: Upload to FTP
+      - name: Upload to SFTP
         env:
-          FTP_SERVER: ${{ secrets.FTP_SERVER }}
-          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          SFTP_SERVER: ${{ secrets.SFTP_SERVER }}
+          SFTP_USERNAME: ${{ secrets.SFTP_USERNAME }}
+          SFTP_PASSWORD: ${{ secrets.SFTP_PASSWORD }}
         run: |
+          echo "Uploading files to SFTP server..."
           for file in ./bin/*.tar.gz; do
-            echo "Uploading $file to FTP..."
-            curl --ftp-create-dirs -T "$file" \
-              ftp://$FTP_USERNAME:$FTP_PASSWORD@$FTP_SERVER/builds/ || exit 1
+            echo "Uploading $file to /home/roman/nginx/app/public/builds/..."
+            sftp -o StrictHostKeyChecking=no <<EOF
+            open sftp://$SFTP_USERNAME:$SFTP_PASSWORD@$SFTP_SERVER
+            cd /home/roman/nginx/app/public/builds
+            put $file
+            bye
+            EOF
           done
       - name: Delete Current Release Assets
         uses: 8Mi-Tech/delete-release-assets-action@main
