@@ -108,22 +108,20 @@ jobs:
         run: tree
         working-directory: bin
 
-      - name: Upload to SFTP
-        env:
-          SFTP_SERVER: ${{ secrets.SFTP_SERVER }}
-          SFTP_USERNAME: ${{ secrets.SFTP_USERNAME }}
-          SFTP_PASSWORD: ${{ secrets.SFTP_PASSWORD }}
-        run: |
-          echo "Uploading files to SFTP server..."
-          for file in ./bin/*.tar.gz; do
-            echo "Uploading $file to /home/roman/nginx/app/public/builds/..."
-            sftp -o StrictHostKeyChecking=no <<EOF
-            open sftp://$SFTP_USERNAME:$SFTP_PASSWORD@$SFTP_SERVER
+      - name: Upload files to SFTP
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SFTP_SERVER }}
+          username: ${{ secrets.SFTP_USERNAME }}
+          password: ${{ secrets.SFTP_PASSWORD }}
+          port: 22
+          script: |
+            mkdir -p /home/roman/nginx/app/public/builds
             cd /home/roman/nginx/app/public/builds
-            put $file
-            bye
-            EOF
-          done
+            for file in $(ls $GITHUB_WORKSPACE/bin/*.tar.gz); do
+              echo "Uploading $file..."
+              put $file
+            done
       - name: Delete Current Release Assets
         uses: 8Mi-Tech/delete-release-assets-action@main
         with:
