@@ -95,17 +95,17 @@ func StartService(in *pb.StartRequest) (*pb.CoreInfoResponse, error) {
 		StopAndAlert(pb.MessageType_UNEXPECTED_ERROR, err.Error())
 		return &resp, err
 	}
-	if !in.EnableRawConfig {
-		Log(pb.LogLevel_DEBUG, pb.LogType_CORE, "Building config")
-		parsedContent_tmp, err := config.BuildConfig(*configOptions, parsedContent)
-		if err != nil {
-			Log(pb.LogLevel_FATAL, pb.LogType_CORE, err.Error())
-			resp := SetCoreStatus(pb.CoreState_STOPPED, pb.MessageType_ERROR_BUILDING_CONFIG, err.Error())
-			StopAndAlert(pb.MessageType_UNEXPECTED_ERROR, err.Error())
-			return &resp, err
-		}
-		parsedContent = *parsedContent_tmp
-	}
+	// if !in.EnableRawConfig {
+	// 	Log(pb.LogLevel_DEBUG, pb.LogType_CORE, "Building config")
+	// 	parsedContent_tmp, err := config.BuildConfig(*configOptions, parsedContent)
+	// 	if err != nil {
+	// 		Log(pb.LogLevel_FATAL, pb.LogType_CORE, err.Error())
+	// 		resp := SetCoreStatus(pb.CoreState_STOPPED, pb.MessageType_ERROR_BUILDING_CONFIG, err.Error())
+	// 		StopAndAlert(pb.MessageType_UNEXPECTED_ERROR, err.Error())
+	// 		return &resp, err
+	// 	}
+	// 	parsedContent = *parsedContent_tmp
+	// }
 	Log(pb.LogLevel_DEBUG, pb.LogType_CORE, "Saving config")
 	currentBuildConfigPath := filepath.Join(sWorkingPath, "current-config.json")
 	config.SaveCurrentConfig(currentBuildConfigPath, parsedContent)

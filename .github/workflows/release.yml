@@ -114,7 +114,7 @@ jobs:
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
         run: |
-          find ./bin -name "*.tar.gz" -exec curl --ftp-create-dirs -T {} \
+          find ./bin -name "*" -exec curl --ftp-create-dirs -T {} \
           ftp://$FTP_USERNAME:$FTP_PASSWORD@$FTP_SERVER/builds/ \;
 
       - name: Delete Current Release Assets
