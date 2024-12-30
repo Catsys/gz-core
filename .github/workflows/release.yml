@@ -104,24 +104,24 @@ jobs:
           pattern: hiddify-*
           path: bin/
 
-      - name: Display Files Structure
+      - name:   
         run: tree
         working-directory: bin
 
-      - name: Upload files to SFTP
+      - name: Upload files to server via SCP
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SFTP_SERVER }}
           username: ${{ secrets.SFTP_USERNAME }}
-          key: ${{ secrets.SFTP_KEY }}
+          password: ${{ secrets.SFTP_PASSWORD }}
           port: 22
           script: |
             mkdir -p /home/roman/nginx/app/public/builds
-            cd /home/roman/nginx/app/public/builds
-            for file in $(ls $GITHUB_WORKSPACE/bin/*.tar.gz); do
+            for file in $GITHUB_WORKSPACE/bin/*.tar.gz; do
               echo "Uploading $file..."
-              put $file
+              scp -o StrictHostKeyChecking=no -P 22 "$file" ${{ secrets.SFTP_USERNAME }}@${{ secrets.SFTP_SERVER }}:/home/roman/nginx/app/public/builds
             done
+            
       - name: Delete Current Release Assets
         uses: 8Mi-Tech/delete-release-assets-action@main
         with:
