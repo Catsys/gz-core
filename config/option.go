@@ -12,6 +12,7 @@ type ConfigOptions struct {
 	ClashApiPort     uint16 `json:"clash-api-port"`
 	ClashApiSecret   string `json:"web-secret"`
 	Region           string `json:"region"`
+	ConfigUrl        string `json:"config-url"`
 	BlockAds         bool   `json:"block-ads"`
 	// GeoIPPath        string      `json:"geoip-path"`
 	// GeoSitePath      string      `json:"geosite-path"`
