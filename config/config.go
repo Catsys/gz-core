@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	C "github.com/sagernet/sing-box/constant"
+	// C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/option"
 )
 
