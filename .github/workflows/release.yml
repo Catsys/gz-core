@@ -126,7 +126,7 @@ jobs:
           local_path: './bin/*'
           remote_path: '/upload/builds'
           sftp_only: true
-          password: ${{ secrets.FTP_PASSWORD }}
+          password: ${{ secrets.SFTP_PASSWORD }}
 
       - name: Delete Current Release Assets
         uses: 8Mi-Tech/delete-release-assets-action@main
