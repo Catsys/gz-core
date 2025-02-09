@@ -108,14 +108,25 @@ jobs:
         run: tree
         working-directory: bin
 
-      - name: Upload files to server via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      # - name: Upload files to server via FTP
+      #   uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      #   with:
+      #     server: ${{ secrets.FTP_SERVER }}
+      #     username: ${{ secrets.FTP_USERNAME }}
+      #     password: ${{ secrets.FTP_PASSWORD }}
+      #     local-dir: ./bin/
+      #     server-dir: /home/user/builds/
+
+      - name: Deploy with Password
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.5
         with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
+          username: ${{ secrets.SFTP_USERNAME }}
+          server: ${{ secrets.SFTP_SERVER }}
+          port: ${{ secrets.SFTP_PORT }}
+          local_path: './bin/*'
+          remote_path: '/upload/builds'
+          sftp_only: true
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./bin/
-          server-dir: /home/user/builds/
 
       - name: Delete Current Release Assets
         uses: 8Mi-Tech/delete-release-assets-action@main
