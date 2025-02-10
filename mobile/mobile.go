@@ -52,7 +52,7 @@ func Parse(path string, tempPath string, debug bool) error {
 func BuildConfig(path string, configOptionsJson string) (string, error) {
 	glazConfig, err := config.LoadGlazConfig(path)
 	if err != nil {
-		return "", fmt.Errorf("ошибка при разборе файла JSON: %w", err)
+		glazConfig = nil
 	}
 
 	if glazConfig != nil && glazConfig.ConfigURL != "" {
