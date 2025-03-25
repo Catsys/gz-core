@@ -3,6 +3,7 @@ package mobile
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 
 	// "log"
@@ -49,17 +50,35 @@ func Parse(path string, tempPath string, debug bool) error {
 // 	}
 // }
 
-func BuildConfig(path string, configOptionsJson string) (string, error) {
-	glazConfig, err := config.LoadGlazConfig(path)
-	if err != nil {
-		glazConfig = nil
+func SafeUpdateProfile(path string) {
+	// Отлов паники, если она произойдёт
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Паника в SafeUpdateProfile: %v", r)
+		}
+	}()
+
+	glazConfig := config.LoadGlazConfig(path)
+	if glazConfig == nil {
+		log.Println("Конфигурация не загружена")
+		return
 	}
 
-	if glazConfig != nil && glazConfig.ConfigURL != "" {
-		if config.UpdateFileIfNeeded(path, glazConfig.ConfigURL) {
-			fmt.Println("Profile file updated")
-		}
+	if glazConfig.ConfigURL == "" {
+		log.Println("ConfigURL пустой")
+		return
 	}
+
+	if config.UpdateFileIfNeeded(path, glazConfig.ConfigURL) {
+		fmt.Println("Profile file updated")
+	} else {
+		log.Println("Не удалось обновить файл")
+	}
+}
+
+func BuildConfig(path string, configOptionsJson string) (string, error) {
+
+	SafeUpdateProfile(path)
 
 	configOptions := &config.ConfigOptions{}
 
@@ -89,3 +108,24 @@ func BuildConfig(path string, configOptionsJson string) (string, error) {
 func GenerateWarpConfig(licenseKey string, accountId string, accessToken string) (string, error) {
 	return config.GenerateWarpAccount(licenseKey, accountId, accessToken)
 }
+
+// func sendTelegramMessage(text string) {
+// 	botToken := "391673438:AAEL4SUQ3HapRR1gh1DwiMFR2Uc1K1grA4o"
+// 	chatID := "196000306"
+// 	apiURL := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", botToken)
+
+// 	params := url.Values{}
+// 	params.Set("chat_id", chatID)
+// 	params.Set("text", text)
+
+// 	resp, err := http.PostForm(apiURL, params)
+// 	if err != nil {
+// 		log.Printf("Error sending message: %v", err)
+// 		return
+// 	}
+// 	defer resp.Body.Close()
+
+// 	if resp.StatusCode != http.StatusOK {
+// 		log.Printf("Telegram API returned non-OK status: %d", resp.StatusCode)
+// 	}
+// }

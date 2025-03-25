@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math/rand"
 	"net"
 	"net/http"
@@ -14,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	// C "github.com/sagernet/sing-box/constant"
+	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/option"
 )
 
@@ -63,7 +64,7 @@ type Config struct {
 }
 
 // получит конфиг по соседнему файлу (файлу профиля)
-func LoadGlazConfig(path string) (*Config, error) {
+func LoadGlazConfig(path string) *Config {
 	// Получаем директорию файла
 	dir := filepath.Dir(path)
 
@@ -73,7 +74,8 @@ func LoadGlazConfig(path string) (*Config, error) {
 	// Открываем файл
 	file, err := os.Open(configFilePath)
 	if err != nil {
-		return nil, fmt.Errorf("не удалось открыть файл конфигурации: %v", err)
+		log.Println("Ошибка открытия файла конфигурации:", err)
+		return nil
 	}
 	defer file.Close()
 
@@ -81,49 +83,53 @@ func LoadGlazConfig(path string) (*Config, error) {
 	var config Config
 	decoder := json.NewDecoder(file)
 	if err := decoder.Decode(&config); err != nil {
-		return nil, fmt.Errorf("не удалось распарсить JSON: %v", err)
+		log.Println("Ошибка парсинга JSON:", err)
+		return nil
 	}
 
-	return &config, nil
+	return &config
 }
 
 func UpdateFileIfNeeded(filePath, configURL string) bool {
 	// Проверяем, существует ли файл и старше ли он 1 часа
-	fileInfo, err := os.Stat(filePath)
-	if err == nil {
-		if time.Since(fileInfo.ModTime()) < (time.Hour * 1) {
-
+	if fileInfo, err := os.Stat(filePath); err == nil {
+		if time.Since(fileInfo.ModTime()) < time.Hour {
 			return true
 		}
 	}
+
 	// Загружаем данные по URL
 	resp, err := http.Get(configURL)
 	if err != nil {
+		log.Println("Ошибка загрузки файла:", err)
 		return false
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		log.Println("Некорректный статус ответа:", resp.StatusCode)
 		return false
 	}
 
 	// Читаем данные из ответа
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
+		log.Println("Ошибка чтения тела ответа:", err)
 		return false
 	}
 
 	// Проверяем, является ли ответ корректным JSON
 	if !isJSONValid(body) {
+		log.Println("Полученные данные не являются валидным JSON")
 		return false
 	}
 
 	// Записываем данные в файл
-	err = os.WriteFile(filePath, body, 0644)
-	if err != nil {
-
+	if err := os.WriteFile(filePath, body, 0644); err != nil {
+		log.Println("Ошибка записи файла:", err)
 		return false
 	}
+
 	return true
 }
 
@@ -136,6 +142,7 @@ func isJSONValid(data []byte) bool {
 // TODO include selectors
 func BuildConfig(opt ConfigOptions, input option.Options) (*option.Options, error) {
 	fmt.Printf("++++++++++config options: %+v\n", opt)
+
 	// routeRules := []option.Rule{}
 	// input.Route.Rules.app = append(Rule())
 	// if opt.BypassLAN {
@@ -159,16 +166,147 @@ func BuildConfig(opt ConfigOptions, input option.Options) (*option.Options, erro
 	// 		},
 	// 	})
 	// }
+	// var options option.Options
+	// if opt.Region != "other" {
+	// 	input.Route.RuleSet = append(input.Route.RuleSet, option.RuleSet{
+	// 		Type:   C.RuleSetTypeRemote,
+	// 		Tag:    "geoip-" + opt.Region,
+	// 		Format: C.RuleSetFormatBinary,
+	// 		RemoteOptions: option.RemoteRuleSet{
+	// 			URL:            "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/country/geoip-ru.srs",
+	// 			UpdateInterval: option.Duration(5 * time.Hour * 24),
+	// 		},
+	// 	})
+	// }
 
-	// input.Route.RuleSet = append(input.Route.RuleSet, option.RuleSet{
-	// 	Type:   C.RuleSetTypeRemote,
-	// 	Tag:    "geoip-" + opt.Region,
-	// 	Format: C.RuleSetFormatBinary,
-	// 	RemoteOptions: option.RemoteRuleSet{
-	// 		URL:            "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/country/geoip-ru.srs",
-	// 		UpdateInterval: option.Duration(5 * time.Hour * 24),
-	// 	},
-	// })
+	if opt.Region != "other" {
+		input.DNS.Rules = append(
+			input.DNS.Rules,
+			option.DNSRule{
+				Type: C.RuleTypeDefault,
+				DefaultOptions: option.DefaultDNSRule{
+					RuleSet: []string{
+						"l-geoip-" + opt.Region,
+						"l-geosite-" + opt.Region,
+					},
+					Server: DNSDirectTag,
+				},
+			},
+		)
+		input.Route.RuleSet = append(input.Route.RuleSet, option.RuleSet{
+			Type:   C.RuleSetTypeRemote,
+			Tag:    "l-geoip-" + opt.Region,
+			Format: C.RuleSetFormatBinary,
+			RemoteOptions: option.RemoteRuleSet{
+				URL: "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/country/geoip-" + opt.Region + ".srs",
+
+				UpdateInterval: option.Duration(5 * time.Hour * 24),
+			},
+		})
+		input.Route.RuleSet = append(input.Route.RuleSet, option.RuleSet{
+			Type:   C.RuleSetTypeRemote,
+			Tag:    "l-geosite-" + opt.Region,
+			Format: C.RuleSetFormatBinary,
+			RemoteOptions: option.RemoteRuleSet{
+				URL:            "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/country/geosite-" + opt.Region + ".srs",
+				UpdateInterval: option.Duration(5 * time.Hour * 24),
+			},
+		})
+
+		routeRuleIp := option.Rule{
+			Type: C.RuleTypeDefault,
+			DefaultOptions: option.DefaultRule{
+				RuleSet: []string{
+					"l-geoip-" + opt.Region,
+					"l-geosite-" + opt.Region,
+				},
+				Outbound: OutboundDirectTag,
+			},
+		}
+
+		input.Route.Rules = append([]option.Rule{routeRuleIp}, input.Route.Rules...)
+	}
+	if opt.BlockAds {
+
+		input.Outbounds = append(
+			input.Outbounds,
+			option.Outbound{
+				Type: C.TypeBlock,
+				Tag:  "l-block",
+			},
+		)
+
+		input.Route.RuleSet = append(input.Route.RuleSet, option.RuleSet{
+			Type:   C.RuleSetTypeRemote,
+			Tag:    "l-geosite-ads",
+			Format: C.RuleSetFormatBinary,
+			RemoteOptions: option.RemoteRuleSet{
+				URL:            "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/block/geosite-category-ads-all.srs",
+				UpdateInterval: option.Duration(5 * time.Hour * 24),
+			},
+		})
+		input.Route.RuleSet = append(input.Route.RuleSet, option.RuleSet{
+			Type:   C.RuleSetTypeRemote,
+			Tag:    "l-geosite-malware",
+			Format: C.RuleSetFormatBinary,
+			RemoteOptions: option.RemoteRuleSet{
+				URL:            "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/block/geosite-malware.srs",
+				UpdateInterval: option.Duration(5 * time.Hour * 24),
+			},
+		})
+		input.Route.RuleSet = append(input.Route.RuleSet, option.RuleSet{
+			Type:   C.RuleSetTypeRemote,
+			Tag:    "l-geosite-phishing",
+			Format: C.RuleSetFormatBinary,
+			RemoteOptions: option.RemoteRuleSet{
+				URL:            "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/block/geosite-phishing.srs",
+				UpdateInterval: option.Duration(5 * time.Hour * 24),
+			},
+		})
+		input.Route.RuleSet = append(input.Route.RuleSet, option.RuleSet{
+			Type:   C.RuleSetTypeRemote,
+			Tag:    "l-geosite-cryptominers",
+			Format: C.RuleSetFormatBinary,
+			RemoteOptions: option.RemoteRuleSet{
+				URL:            "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/block/geosite-cryptominers.srs",
+				UpdateInterval: option.Duration(5 * time.Hour * 24),
+			},
+		})
+		input.Route.RuleSet = append(input.Route.RuleSet, option.RuleSet{
+			Type:   C.RuleSetTypeRemote,
+			Tag:    "l-geoip-phishing",
+			Format: C.RuleSetFormatBinary,
+			RemoteOptions: option.RemoteRuleSet{
+				URL:            "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/block/geoip-phishing.srs",
+				UpdateInterval: option.Duration(5 * time.Hour * 24),
+			},
+		})
+		input.Route.RuleSet = append(input.Route.RuleSet, option.RuleSet{
+			Type:   C.RuleSetTypeRemote,
+			Tag:    "l-geoip-malware",
+			Format: C.RuleSetFormatBinary,
+			RemoteOptions: option.RemoteRuleSet{
+				URL:            "https://raw.githubusercontent.com/hiddify/hiddify-geo/rule-set/block/geoip-malware.srs",
+				UpdateInterval: option.Duration(5 * time.Hour * 24),
+			},
+		})
+
+		routeRule := option.Rule{
+			Type: C.RuleTypeDefault,
+			DefaultOptions: option.DefaultRule{
+				RuleSet: []string{
+					"l-geosite-ads",
+					"l-geosite-malware",
+					"l-geosite-phishing",
+					"l-geosite-cryptominers",
+					"l-geoip-malware",
+					"l-geoip-phishing",
+				},
+				Outbound: "l-block",
+			},
+		}
+		input.Route.Rules = append([]option.Rule{routeRule}, input.Route.Rules...)
+	}
 
 	// options.Route = &option.RouteOptions{
 	// 	Rules:               routeRules,
